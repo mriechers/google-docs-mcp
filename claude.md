@@ -17,6 +17,7 @@ FastMCP server with 42 tools for Google Docs, Sheets, and Drive.
 
 ## Known Limitations
 
+- **deleteFile DISABLED:** File deletion is disabled for safety. Use `moveFile` instead, or delete via drive.google.com
 - **Comment anchoring:** Programmatically created comments appear in "All Comments" but aren't visibly anchored to text in the UI
 - **Resolved status:** May not persist in Google Docs UI (Drive API limitation)
 - **editTableCell:** Not implemented (complex cell index calculation)

@@ -12,8 +12,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRootDir = path.resolve(__dirname, '..');
 
-const TOKEN_PATH = path.join(projectRootDir, 'token.json');
-const CREDENTIALS_PATH = path.join(projectRootDir, 'credentials.json');
+// Support environment variable overrides for multi-account configurations
+// This allows running multiple instances with different credential directories
+const TOKEN_PATH = process.env.GOOGLE_TOKEN_PATH || path.join(projectRootDir, 'token.json');
+const CREDENTIALS_PATH = process.env.GOOGLE_CREDENTIALS_PATH || path.join(projectRootDir, 'credentials.json');
 // --- End of path calculation ---
 
 const SCOPES = [
