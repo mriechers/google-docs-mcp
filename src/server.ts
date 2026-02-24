@@ -1305,6 +1305,114 @@ server.addTool({
 });
 
 server.addTool({
+  name: 'suggestEdits',
+  description: 'Proposes one or more edits to a Google Document by adding structured comments anchored to the targeted text. Each suggestion includes the original text, the proposed replacement, and an explanation. Use this instead of directly modifying document content when changes should be reviewed and approved by a human. Comments appear in the document\'s comment thread for easy review.',
+  parameters: DocumentIdParameter.extend({
+    suggestions: z.array(z.object({
+      textToFind: z.string().min(1).describe('The exact text in the document to suggest changing.'),
+      matchInstance: z.number().int().min(1).optional().default(1).describe('Which instance of the text to target (1st, 2nd, etc.). Defaults to 1.'),
+      suggestedReplacement: z.string().describe('The proposed replacement text. Use empty string to suggest deletion.'),
+      explanation: z.string().optional().describe('Why this change is being suggested. Provides context for the reviewer.'),
+    })).min(1).max(20).describe('Array of suggested edits to propose (1-20 suggestions per call).'),
+  }),
+  execute: async (args, { log }) => {
+    log.info(`Suggesting ${args.suggestions.length} edit(s) in doc ${args.documentId}`);
+
+    const docs = await getDocsClient();
+    const drive = google.drive({ version: 'v3', auth: authClient! });
+
+    // Fetch the document once for all suggestions
+    const doc = await docs.documents.get({ documentId: args.documentId });
+    const content = doc.data.body?.content || [];
+
+    // Build full text and element map for index lookups
+    const fullTextParts: string[] = [];
+    const elementMap: { elementStart: number; elementEnd: number; text: string }[] = [];
+    for (const element of content) {
+      if (element.paragraph) {
+        for (const textElement of element.paragraph.elements || []) {
+          if (textElement.textRun) {
+            const text = textElement.textRun.content || '';
+            const elementStart = textElement.startIndex || 0;
+            const elementEnd = textElement.endIndex || 0;
+            fullTextParts.push(text);
+            elementMap.push({ elementStart, elementEnd, text });
+          }
+        }
+      }
+    }
+
+    const results: string[] = [];
+    let successCount = 0;
+
+    for (const suggestion of args.suggestions) {
+      try {
+        // Find the target text range
+        const range = await GDocsHelpers.findTextRange(docs, args.documentId, suggestion.textToFind, suggestion.matchInstance);
+        if (!range) {
+          results.push(`SKIPPED: Could not find instance ${suggestion.matchInstance} of "${suggestion.textToFind}"`);
+          continue;
+        }
+
+        const { startIndex, endIndex } = range;
+
+        // Extract the quoted text from the document at this range
+        let quotedText = '';
+        for (const el of elementMap) {
+          if (el.elementEnd > startIndex && el.elementStart < endIndex) {
+            const startOffset = Math.max(0, startIndex - el.elementStart);
+            const endOffset = Math.min(el.text.length, endIndex - el.elementStart);
+            quotedText += el.text.substring(startOffset, endOffset);
+          }
+        }
+
+        // Format the comment with a structured suggestion
+        const commentParts: string[] = ['📝 Suggested Edit'];
+        if (suggestion.suggestedReplacement === '') {
+          commentParts.push(`Delete: "${quotedText}"`);
+        } else {
+          commentParts.push(`Replace with: "${suggestion.suggestedReplacement}"`);
+        }
+        if (suggestion.explanation) {
+          commentParts.push(`Reason: ${suggestion.explanation}`);
+        }
+        const commentText = commentParts.join('\n\n');
+
+        const response = await drive.comments.create({
+          fileId: args.documentId,
+          fields: 'id,content,quotedFileContent,author,createdTime',
+          requestBody: {
+            content: commentText,
+            quotedFileContent: {
+              value: quotedText,
+              mimeType: 'text/html'
+            },
+            anchor: JSON.stringify({
+              r: args.documentId,
+              a: [{
+                txt: {
+                  o: startIndex - 1,  // Drive API uses 0-based indexing
+                  l: endIndex - startIndex,
+                  ml: endIndex - startIndex
+                }
+              }]
+            })
+          }
+        });
+
+        successCount++;
+        results.push(`OK: Suggested edit for "${quotedText}" → "${suggestion.suggestedReplacement}" (Comment ID: ${response.data.id})`);
+
+      } catch (error: any) {
+        results.push(`ERROR on "${suggestion.textToFind}": ${error.message || 'Unknown error'}`);
+      }
+    }
+
+    return `Suggested ${successCount}/${args.suggestions.length} edit(s):\n\n${results.join('\n')}`;
+  }
+});
+
+server.addTool({
   name: 'replyToComment',
   description: 'Adds a reply to an existing comment.',
   parameters: DocumentIdParameter.extend({

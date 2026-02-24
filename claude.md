@@ -1,6 +1,6 @@
 # Google Docs MCP Server
 
-FastMCP server with 42 tools for Google Docs, Sheets, and Drive.
+FastMCP server with 45 tools for Google Docs, Sheets, and Drive.
 
 ## Tool Categories
 
@@ -9,19 +9,21 @@ FastMCP server with 42 tools for Google Docs, Sheets, and Drive.
 | Docs | 5 | `readGoogleDoc`, `appendToGoogleDoc`, `insertText`, `deleteRange`, `listDocumentTabs` |
 | Formatting | 3 | `applyTextStyle`, `applyParagraphStyle`, `formatMatchingText` |
 | Structure | 7 | `insertTable`, `insertPageBreak`, `insertImageFromUrl`, `insertLocalImage`, `editTableCell`*, `findElement`*, `fixListFormatting`* |
-| Comments | 6 | `listComments`, `getComment`, `addComment`, `replyToComment`, `resolveComment`, `deleteComment` |
+| Comments | 7 | `listComments`, `getComment`, `addComment`, `suggestEdits`, `replyToComment`, `resolveComment`, `deleteComment` |
 | Sheets | 8 | `readSpreadsheet`, `writeSpreadsheet`, `appendSpreadsheetRows`, `clearSpreadsheetRange`, `createSpreadsheet`, `listGoogleSheets` |
-| Drive | 13 | `listGoogleDocs`, `searchGoogleDocs`, `getDocumentInfo`, `createFolder`, `moveFile`, `copyFile`, `createDocument` |
+| Drive | 15 | `listGoogleDocs`, `searchDriveFiles`, `downloadFile`, `getDocumentInfo`, `createFolder`, `moveFile`, `copyFile`, `createDocument` |
 
 *Not fully implemented
 
 ## Known Limitations
 
 - **deleteFile DISABLED:** File deletion is disabled for safety. Use `moveFile` instead, or delete via drive.google.com
-- **Comment anchoring:** Programmatically created comments appear in "All Comments" but aren't visibly anchored to text in the UI
+- **Comment anchoring:** Programmatically created comments (including `suggestEdits`) appear in "All Comments" but aren't visibly anchored to text in the UI
+- **suggestEdits vs true Suggestions:** `suggestEdits` uses comments to propose changes — it does not use Google Docs' native suggestion mode (the API doesn't support creating suggestions programmatically)
 - **Resolved status:** May not persist in Google Docs UI (Drive API limitation)
 - **editTableCell:** Not implemented (complex cell index calculation)
 - **fixListFormatting:** Experimental, may not work reliably
+- **downloadFile size threshold:** Files over 25MB (configurable via `maxDownloadSizeMB`) return a download URL instead of base64 content. Native Google Docs/Sheets files cannot be downloaded — use `readGoogleDoc` or `readSpreadsheet` instead
 
 ## Parameter Patterns
 
@@ -39,7 +41,7 @@ FastMCP server with 42 tools for Google Docs, Sheets, and Drive.
 | `src/types.ts` | Zod schemas, hex color validation, style parameter definitions |
 | `src/googleDocsApiHelpers.ts` | `findTextRange`, `executeBatchUpdate`, style request builders |
 | `src/googleSheetsApiHelpers.ts` | A1 notation parsing, range operations |
-| `src/server.ts` | All 42 tool definitions with full parameter schemas |
+| `src/server.ts` | All 45 tool definitions with full parameter schemas |
 
 ## See Also
 
