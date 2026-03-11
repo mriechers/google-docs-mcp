@@ -1,4 +1,10 @@
 {
+  "name": "google-docs",
+  "deployment": "node",
+  "command": "node",
+  "args": ["index.js"],
+  "cwd": "${SERVER_DIR}",
+  "type": "stdio",
   "instances": {
     "google-docs-personal": {
       "env": {
@@ -13,5 +19,5 @@
       }
     }
   },
-  "notes": "Requires OAuth credentials from Google Cloud Console. Each instance needs credentials in its own subdirectory."
+  "notes": "Requires OAuth credentials from Google Cloud Console. Run `npm install && npm run build` first. Each instance needs credentials in its own subdirectory."
 }
