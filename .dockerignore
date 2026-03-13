@@ -1,0 +1,11 @@
+node_modules/
+.git
+.github/
+credentials/
+tests/
+*.md
+.DS_Store
+.repomix/
+*.mp4
+.gitignore
+dist/

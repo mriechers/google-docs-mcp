@@ -18,6 +18,10 @@ const TOKEN_PATH = process.env.GOOGLE_TOKEN_PATH || path.join(projectRootDir, 't
 const CREDENTIALS_PATH = process.env.GOOGLE_CREDENTIALS_PATH || path.join(projectRootDir, 'credentials.json');
 // --- End of path calculation ---
 
+// Log resolved paths at startup for easier debugging
+console.error(`[auth] CREDENTIALS_PATH: ${CREDENTIALS_PATH} (${process.env.GOOGLE_CREDENTIALS_PATH ? 'from env' : 'default fallback'})`);
+console.error(`[auth] TOKEN_PATH: ${TOKEN_PATH} (${process.env.GOOGLE_TOKEN_PATH ? 'from env' : 'default fallback'})`);
+
 const SCOPES = [
   'https://www.googleapis.com/auth/documents',
   'https://www.googleapis.com/auth/drive', // Full Drive access for listing, searching, and document discovery
@@ -73,7 +77,18 @@ async function loadSavedCredentialsIfExist(): Promise<OAuth2Client | null> {
 }
 
 async function loadClientSecrets() {
-  const content = await fs.readFile(CREDENTIALS_PATH);
+  let content: Buffer;
+  try {
+    content = await fs.readFile(CREDENTIALS_PATH);
+  } catch (err: any) {
+    if (err.code === 'ENOENT') {
+      const hint = process.env.GOOGLE_CREDENTIALS_PATH
+        ? `Check that GOOGLE_CREDENTIALS_PATH is correct: ${CREDENTIALS_PATH}`
+        : `Set the GOOGLE_CREDENTIALS_PATH environment variable to the path of your credentials.json file (currently falling back to default: ${CREDENTIALS_PATH})`;
+      throw new Error(`Credentials file not found. ${hint}`);
+    }
+    throw err;
+  }
   const keys = JSON.parse(content.toString());
   const key = keys.installed || keys.web;
    if (!key) throw new Error("Could not find client secrets in credentials.json.");
